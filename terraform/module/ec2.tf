@@ -55,7 +55,7 @@ resource "aws_instance" "web" {
   }
 
   provisioner "local-exec" {
-    command = "cd ../../ansible_playbooks/ && ansible-playbook -i ${self.public_ip}, --private-key ${var.PRIVATE_KEY_PATH} --extra-vars 'user=${var.EC2_USER} aws_access_key=${var.aws_access_key} aws_secret_key=${var.aws_secret_key} aws_ssm_db_password_name=${aws_ssm_parameter.mydb_password.name} db_name=${var.db_name} db_username=${var.db_username} db_connection=5432 db_address=${aws_db_instance.postgre.address}' web_proxy_setup.yml"
+    command = "cd ../../ansible_playbooks/ && ansible-playbook -i ${self.public_ip}, --private-key ../terraform/ap_southeast_1_key_pair --extra-vars 'user=${var.EC2_USER} aws_access_key=${var.aws_access_key} aws_secret_key=${var.aws_secret_key} aws_ssm_db_password_name=${aws_ssm_parameter.mydb_password.name} db_name=${var.db_name} db_username=${var.db_username} db_connection=5432 db_address=${aws_db_instance.postgre.address}' web_proxy_setup.yml"
   }
 
   provisioner "remote-exec" {
