@@ -1,0 +1,122 @@
+---
+- hosts: all
+  remote_user: "{{ user }}"
+  tasks:
+    - name: Upload docker-compose files
+      copy:
+        src: ../docker-compose
+        dest: ~/app/
+
+    - name: Install docker
+      expect:
+        command: amazon-linux-extras install docker
+        responses:
+          'Is this ok \[y\/d\/N\]': 'y'
+        echo: yes
+      register: install_docker_output
+      become: yes
+    - debug: msg="{{ install_docker_output.stdout_lines }}"
+
+
+    - name: Install docker-compose
+      shell: curl -L https://github.com/docker/compose/releases/download/1.25.1/docker-compose-"`uname -s`-`uname -m`" -o /usr/local/bin/docker-compose
+      register: install_docker_compose_output
+      become: yes
+    - debug: msg="{{ install_docker_compose_output }}"
+
+    - name: Set excute permission for docker-compose
+      command: chmod +x /usr/local/bin/docker-compose
+      become: yes
+
+    - name: Enable docker 
+      systemd:
+        name: docker
+        enabled: yes
+      become: yes
+
+    - name: Start docker 
+      service:
+        name: docker
+        state: started 
+      become: yes
+
+    - name: Add current user to docker group
+      command: usermod -a -G docker "{{ user }}"
+      become: yes
+
+    - name: Create directory for source code
+      file:
+        path: ~/app/testing/
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0755'
+
+    - name: Move source code to right directory
+      shell: mv ~/app/docker-compose/*.py ~/app/testing/
+
+    - name: Set excute permission to hello_world.py
+      command: chmod +x ~/app/testing/hello_world.py
+
+    - name: Set Databasee variable for docker-compose
+      replace:
+        path: /home/{{ user }}/app/docker-compose/.env 
+        regexp: '{{ item.pattern }}.*'
+        replace: '{{ item.content }}'
+      with_items:
+        - {pattern: "DB_NAME=",content: "DB_NAME={{ db_name }}"}
+        - {pattern: "DB_USERNAME=",content: "DB_USERNAME={{ db_username }}"}
+        - {pattern: "DB_CONNECTION=",content: "DB_CONNECTION={{ db_connection }}"}
+        - {pattern: "DB_ADDRESS=",content: "DB_ADDRESS={{ db_address }}"}
+
+    - name: create aws config directory
+      command: mkdir ~/.aws
+
+    - name: create aws credentials file
+      command: touch ~/.aws/credentials
+
+    - name: create aws config file
+      command: touch ~/.aws/config
+
+    - name: Setup credentials for AWS CLI
+      blockinfile:
+        path: ~/.aws/credentials
+        marker: "# {mark} ANSIBLE MANAGED BLOCK | AWS CREDENTIALS"
+        block: |
+           [default]
+           aws_access_key_id = {{ aws_access_key }}
+           aws_secret_access_key = {{ aws_secret_key }}
+
+    - name: Setup config for AWS CLI
+      blockinfile:
+        path: ~/.aws/config
+        marker: "# {mark} ANSIBLE MANAGED BLOCK | AWS CONFIG"
+        block: |
+           [default]
+           output = json
+           region = ap-southeast-1
+
+    - name: Set permission .aws directory
+      file:
+        path: /home/{{ user }}/.aws
+        state: directory
+        recurse: yes
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0700'
+      become: yes
+
+
+    - name: Get db_password
+      shell: aws ssm get-parameter --name "{{ aws_ssm_db_password_name }}" --with-decryption --query Parameter.Value | sed -e 's/\"//g' | base64 -d > ~/app/mydb_password
+
+    - name: Decrypt db_password 
+      shell: aws kms decrypt --ciphertext-blob fileb://~/app/mydb_password --output text --query Plaintext | base64 -d
+      register: db_password_decrypted
+
+    - name: Store db_password to .env file
+      replace:
+        path: /home/{{ user }}/app/docker-compose/.env 
+        regexp: 'DB_PASSWORD=.*'
+        replace: 'DB_PASSWORD={{ db_password_decrypted.stdout }}'
+
