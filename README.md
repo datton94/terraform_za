@@ -1,3 +1,9 @@
+<h1>Introduction</h1>
+<h2>Update September 10 2025</h2>
+This repository was an assignment when I apply to Global Fash Group, I haven't use Terraform before and I just have 2 weeks (as I remember and I have to handle a full time job at that time) to research and use it in the lab
+I'm not sure does it still work nowaday, but it used to work and I have passed the interview at GFG.
+
+<h1>How to use this repo</h1>h1>
 <h3>Requirement:</h3>
 
  Your local host: Terraform, Ansible
