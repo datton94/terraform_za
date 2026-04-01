@@ -1,0 +1,10 @@
+
+---
+- hosts: all
+  remote_user: "{{ user }}"
+  tasks:
+    - name: Start application
+      docker_compose:
+        project_src: ~/app/docker-compose/
+        services: app
+        state: present

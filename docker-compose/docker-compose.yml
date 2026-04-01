@@ -1,0 +1,26 @@
+version: '3'
+
+networks:
+  frontend:
+    driver: ${NETWORKS_DRIVER}
+  backend:
+    driver: ${NETWORKS_DRIVER}
+
+services:
+  app:
+    image: datton94/python:1.0
+    restart: unless-stopped
+    environment:
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_ADDRESS=${DB_ADDRESS}
+      - DB_CONNECTION=${DB_CONNECTION}
+    volumes:
+      - ~/app/testing:/var/www/testing
+      - ~/app/logs:/var/log/app/
+    ports:
+      - "80:80"
+      - "5000:5000"
+    networks:
+      - backend
